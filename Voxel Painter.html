@@ -1,0 +1,265 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js canvas - interactive - voxel painter</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+    <body>
+
+        <script src="js/three.js"></script>
+
+        <script src="js/renderers/Projector.js"></script>
+        <script src="js/renderers/CanvasRenderer.js"></script>
+
+        <script src="js/libs/stats.min.js"></script>
+
+        <script>
+            var blockSize = 20; // change block size
+            var planeWidth = 1000, planeDepth = 1000;
+            var container;  //used to create a div on new webpage
+            var camera, scene, renderer;    // 3 basic objects needed
+            var plane;  //
+
+            var mouse, raycaster, isShiftDown = false; //controls and selection
+
+            var cubeGeometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+            var cubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff80, overdraw: 0.5 });
+
+            var objects = [];
+
+
+            
+            var textGroup;
+            var loader = new THREE.FontLoader();
+            loader.load('fonts/helvetiker_regular.typeface.json', function (font) {
+                init(font);
+                render();
+            });
+
+            //init();
+            render();
+
+            function init( font ) {
+                //create div and layout
+                container = document.createElement('div');
+                document.body.appendChild(container);
+
+                var info = document.createElement('div');
+                info.style.position = 'absolute';
+                info.style.top = '10px';
+                info.style.width = '100%';
+                info.style.textAlign = 'center';
+                info.innerHTML = 'Room Selection:<br><strong>click</strong>: add Room, <strong>shift + click</strong>: remove Room, <a href="javascript:save()">save .png</a>';
+                container.appendChild(info);
+
+                //camera
+                camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+                camera.position.set(500, 800, 1600);
+                camera.lookAt(new THREE.Vector3());
+
+                scene = new THREE.Scene();
+
+                //scene.background = new THREE.Color(0xf0f0f0);
+                scene.background = new THREE.Color(0xa3e6ff);
+
+                // Grid
+                //var gridHelper = new THREE.GridHelper( 1000, 20 );
+                //scene.add( gridHelper );
+
+                //
+                raycaster = new THREE.Raycaster();
+                mouse = new THREE.Vector2();
+
+                var geometry = new THREE.PlaneBufferGeometry(planeWidth, planeDepth);
+                geometry.rotateX(- Math.PI / 2);
+
+                //plane = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: true }));
+                
+                texture = new THREE.TextureLoader().load('img/floor1.jpg');
+
+                //texture = THREE.TextureLoader().load('img/floor1.jpg');
+                material = new THREE.MeshBasicMaterial({ map: texture });
+                plane = new THREE.Mesh(geometry, material);
+
+                scene.add(plane);
+
+                objects.push(plane);
+
+                var material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+
+                // Lights
+
+                var ambientLight = new THREE.AmbientLight(0x606060);
+                scene.add(ambientLight);
+
+                var directionalLight = new THREE.DirectionalLight(0xffffff);
+                directionalLight.position.x = Math.random() - 0.5;
+                directionalLight.position.y = Math.random() - 0.5;
+                directionalLight.position.z = Math.random() - 0.5;
+                directionalLight.position.normalize();
+                scene.add(directionalLight);
+
+                var directionalLight = new THREE.DirectionalLight(0x808080);
+                directionalLight.position.x = Math.random() - 0.5;
+                directionalLight.position.y = Math.random() - 0.5;
+                directionalLight.position.z = Math.random() - 0.5;
+                directionalLight.position.normalize();
+                scene.add(directionalLight);
+
+                renderer = new THREE.CanvasRenderer();
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                container.appendChild(renderer.domElement);
+
+                ////////////////////TEXT///////////////////////
+                // Get text from hash
+                var theText = "Empire BLDG - LL 1";
+                var hash = document.location.hash.substr(1);
+
+                if (hash.length !== 0) {
+                    theText = hash;
+                }
+
+                var textGeometry = new THREE.TextGeometry(theText, {
+                    font: font,
+                    size: 30,
+                    height: 10,
+                    curveSegments: 2
+
+                });
+
+                textGeometry.computeBoundingBox();
+
+                var centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
+
+                var textMaterials = [
+                    //new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff, overdraw: 0.5 }),
+                    new THREE.MeshBasicMaterial({ color: 0xffcc00, overdraw: 0.5 }),
+                    new THREE.MeshBasicMaterial({ color: 0x000000, overdraw: 0.5 })
+                ];
+
+                var textMesh = new THREE.Mesh(textGeometry, textMaterials);
+
+                textMesh.position.x = centerOffset;
+                textMesh.position.y = -100;
+                textMesh.position.z = planeDepth/2;
+
+                textMesh.rotation.x = 0;
+                textMesh.rotation.y = Math.PI * 2;
+
+                textGroup = new THREE.Group();
+                textGroup.add(textMesh);
+
+                scene.add(textGroup);
+                ////////////////////TEXT///////////////////////
+
+
+
+                document.addEventListener('mousedown', onDocumentMouseDown, false);
+                document.addEventListener('keydown', onDocumentKeyDown, false);
+                document.addEventListener('keyup', onDocumentKeyUp, false);
+
+                //
+
+                window.addEventListener('resize', onWindowResize, false);
+
+            }
+
+            function onWindowResize() {
+
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+
+                render();
+
+            }
+
+            function onDocumentMouseDown(event) {
+
+                event.preventDefault();
+
+                mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+                mouse.y = - (event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+
+                var intersects = raycaster.intersectObjects(objects);
+
+                if (intersects.length > 0) {
+
+                    var intersect = intersects[0];
+
+                    if (isShiftDown) {
+
+                        if (intersect.object != plane) {
+
+                            scene.remove(intersect.object);
+
+                            objects.splice(objects.indexOf(intersect.object), 1);
+
+                        }
+
+                    } else {
+                        var Weekgroup;
+                        var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                        voxel.position.copy(intersect.point).add(intersect.face.normal);
+                        voxel.position.divideScalar(blockSize).floor().multiplyScalar(blockSize).addScalar(blockSize / 2);
+                        scene.add(voxel);
+
+                        objects.push(voxel);
+
+                    }
+
+                    render();
+
+                }
+
+            }
+
+            function onDocumentKeyDown(event) {
+
+                switch (event.keyCode) {
+
+                    case 16: isShiftDown = true; break;
+
+                }
+
+            }
+
+            function onDocumentKeyUp(event) {
+
+                switch (event.keyCode) {
+
+                    case 16: isShiftDown = false; break;
+
+                }
+            }
+
+            function save() {
+
+                window.open(renderer.domElement.toDataURL('image/png'), 'mywindow');
+                return false;
+
+            }
+
+            function render() {
+
+                renderer.render(scene, camera);
+
+            }
+
+        </script>
+
+    </body>
+</html>
