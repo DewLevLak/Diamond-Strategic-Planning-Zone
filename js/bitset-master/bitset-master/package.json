@@ -1,0 +1,30 @@
+{
+  "author": "Tom de Grunt <tom@degrunt.nl>",
+  "name": "bitset",
+  "description": "BitSet implementation for JavaScript",
+  "keywords": ["bit", "bitset", "metrics"],
+  "contributors": [
+    {
+      "name": "Chris Parker", 
+      "email": "me@chrisaparker.com"
+    }
+  ], 
+  "version": "0.3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tdegrunt/bitset"
+  },
+  "main": "./lib/bitset.js",
+  "engines": {
+    "node": "~0.10.0"
+  },
+  "scripts": {
+    "test": "cake test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "should": "~1.3",
+    "mocha": "~1.13",
+    "coffee-script": "~1.6.3"
+  }
+}
